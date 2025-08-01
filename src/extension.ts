@@ -3,7 +3,9 @@
 import * as vscode from 'vscode';
 import * as fsUtils from './fsUtils'
 import * as fs from 'fs'
-import fxp, { XMLParser } from 'fast-xml-parser';
+import {XMLBuilder, XMLParser, XMLValidator} from 'fast-xml-parser';
+import { get_message, Locales } from './i18n';
+import { readAssemblyName } from './dllUtils';
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -13,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// The command has been defined in the package.json file
 	const disposable = vscode.commands.registerCommand('add-csharp-dll-reference.addDllReference', (uri: vscode.Uri) => {
-		if (uri == null) {
+		if (uri === null) {
 			// idk
 		}
 		else {
@@ -30,7 +32,7 @@ async function addDllReferenceForDll(uri: vscode.Uri) {
 		csProjFile = await askUserForCsProjFile(uri);
 	}
 	catch (error: any){
-		if (error.cause == askUserForCsProjFile){
+		if (error.cause === askUserForCsProjFile){
 			vscode.window.showErrorMessage(`Could not find the workspace folder that contains ${uri.fsPath}`);
 		}
 		else{
@@ -38,13 +40,18 @@ async function addDllReferenceForDll(uri: vscode.Uri) {
 		}
 		return;
 	}
+	if (csProjFile === undefined){
+		vscode.window.showErrorMessage("No csproj file selected. Aborting.");
+		return;
+	}
+	addDllReferenceToCsProjFile(csProjFile, uri.fsPath);
 
 }
-async function askUserForCsProjFile(uri: vscode.Uri) {
+async function askUserForCsProjFile(uri: vscode.Uri) : Promise<string | undefined> {
 	let currentFolderPath = vscode.workspace.getWorkspaceFolder(uri)?.name;
-	if (currentFolderPath == undefined) {
+	if (currentFolderPath === undefined) {
 		let error = Error("Couldn't find current workspace folder");
-		error.name = "Dir not found"
+		error.name = "Dir not found";
 		error.cause = askUserForCsProjFile;
 		throw error;
 	}
@@ -57,16 +64,30 @@ async function askUserForCsProjFile(uri: vscode.Uri) {
  * Returns whether to continue or not, it handles it's own errors
  */
 function addDllReferenceToCsProjFile(csProjFilepath: string, dllPath: string): boolean{
-	let csProjXmlText = fs.readFileSync(csProjFilepath, { encoding: 'utf8', flag: 'r' })
-	let parser = new fxp.XMLParser()
-	let builder = new fxp.XMLBuilder()
-	try{
-		fxp.XMLValidator.validate(csProjXmlText)
+	let assemblyName = readAssemblyName();
+	let csProjXmlText = fs.readFileSync(csProjFilepath, { encoding: 'utf8', flag: 'r' });
+	let parser = new XMLParser();
+	let builder = new XMLBuilder();
+	let validationResult = XMLValidator.validate(csProjXmlText);
+	if (validationResult !== true){
+		vscode.window.showErrorMessage("Invalid csproj file, err:" + validationResult.err.msg);
+		return false;
 	}
-	catch (error){
-		
+	let parsed : CsProjFile = parser.parse(csProjXmlText);
+	let ItemGroup = [];
+	if (parsed.Project === undefined){
+		vscode.window.showErrorMessage(get_message("INVALID_CSPROJ_FILE", Locales.en) + "No project tag found");
 	}
-	
+	parsed = addDllReferenceToCsProjFile();
+	return true;
+}
+
+function addReferenceToCsProjFileObject(csProjFile: CsProjFile, dllPath: string, assemblyName: string) : CsProjFile{
+	csProjFile.Project.ItemGroup = 
+	csProjFile.Project.ItemGroup === undefined ? [] : csProjFile.Project.ItemGroup; // if it's undefined, define it as a list
+	csProjFile.Project.ItemGroup = 
+	typeof(csProjFile.Project.ItemGroup) !== typeof([]) ? [csProjFile.Project.ItemGroup] : csProjFile.Project.ItemGroup; // make it a list if it isn't
+	csProjFile.Project.ItemGroup.push()
 }
 
 // This method is called when your extension is deactivated
