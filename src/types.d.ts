@@ -4,3 +4,6 @@ interface CsProjFile{
 interface CsProject{
     ItemGroup: any[]
 }
+interface dllReference{
+    
+}

@@ -11,7 +11,7 @@ import { readAssemblyName } from './dllUtils';
 export function activate(context: vscode.ExtensionContext) {
 
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "add-csharp-dll-reference" is now active!');
+	console.log('Congratulations, your extension "add-csharp-dll-reference" is ndfbdfsgdfsow active!');
 
 	// The command has been defined in the package.json file
 	const disposable = vscode.commands.registerCommand('add-csharp-dll-reference.addDllReference', (uri: vscode.Uri) => {
@@ -74,11 +74,10 @@ function addDllReferenceToCsProjFile(csProjFilepath: string, dllPath: string): b
 		return false;
 	}
 	let parsed : CsProjFile = parser.parse(csProjXmlText);
-	let ItemGroup = [];
 	if (parsed.Project === undefined){
-		vscode.window.showErrorMessage(get_message("INVALID_CSPROJ_FILE", Locales.en) + "No project tag found");
+		vscode.window.showErrorMessage("Invalid csproj profile, err: "+ "No project tag found");
 	}
-	parsed = addDllReferenceToCsProjFile();
+	parsed = addReferenceToCsProjFileObject(parsed, dllPath, assemblyName);
 	return true;
 }
 
@@ -87,7 +86,9 @@ function addReferenceToCsProjFileObject(csProjFile: CsProjFile, dllPath: string,
 	csProjFile.Project.ItemGroup === undefined ? [] : csProjFile.Project.ItemGroup; // if it's undefined, define it as a list
 	csProjFile.Project.ItemGroup = 
 	typeof(csProjFile.Project.ItemGroup) !== typeof([]) ? [csProjFile.Project.ItemGroup] : csProjFile.Project.ItemGroup; // make it a list if it isn't
-	csProjFile.Project.ItemGroup.push()
+	csProjFile.Project.ItemGroup.push();
+	
+	return csProjFile;
 }
 
 // This method is called when your extension is deactivated
