@@ -1,17 +1,13 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import * as fsUtils from './fsUtils'
-import * as fs from 'fs'
+import * as fsUtils from './fsUtils';
+import * as fs from 'fs';
 import {XMLBuilder, XMLParser, XMLValidator} from 'fast-xml-parser';
-import { get_message, Locales } from './i18n';
 import { readAssemblyName } from './dllUtils';
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+
 export function activate(context: vscode.ExtensionContext) {
 
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "add-csharp-dll-reference" is ndfbdfsgdfsow active!');
+	
+	console.log('Congratulations, your extension "add-csharp-dll-reference" is now active!');
 
 	// The command has been defined in the package.json file
 	const disposable = vscode.commands.registerCommand('add-csharp-dll-reference.addDllReference', (uri: vscode.Uri) => {
@@ -19,7 +15,8 @@ export function activate(context: vscode.ExtensionContext) {
 			// idk
 		}
 		else {
-			addDllReferenceForDll(uri);
+			addDllReferenceForDll(uri).then(() => vscode.window.showInformationMessage("Added dll reference."));
+			
 		}
 	});
 
@@ -64,10 +61,18 @@ async function askUserForCsProjFile(uri: vscode.Uri) : Promise<string | undefine
  * Returns whether to continue or not, it handles it's own errors
  */
 function addDllReferenceToCsProjFile(csProjFilepath: string, dllPath: string): boolean{
-	let assemblyName = readAssemblyName();
+	let assemblyName = readAssemblyName(dllPath);
+	if (assemblyName === undefined || assemblyName === ""){
+		vscode.window.showErrorMessage("No assembly name");
+		return false;
+	}
 	let csProjXmlText = fs.readFileSync(csProjFilepath, { encoding: 'utf8', flag: 'r' });
-	let parser = new XMLParser();
-	let builder = new XMLBuilder();
+	const opts = {
+		ignoreAttributes: false,
+        attributeNamePrefix : "a_"
+	};
+	let parser = new XMLParser(opts);
+	let builder = new XMLBuilder(opts);
 	let validationResult = XMLValidator.validate(csProjXmlText);
 	if (validationResult !== true){
 		vscode.window.showErrorMessage("Invalid csproj file, err:" + validationResult.err.msg);
@@ -78,6 +83,8 @@ function addDllReferenceToCsProjFile(csProjFilepath: string, dllPath: string): b
 		vscode.window.showErrorMessage("Invalid csproj profile, err: "+ "No project tag found");
 	}
 	parsed = addReferenceToCsProjFileObject(parsed, dllPath, assemblyName);
+	const newXML = builder.build(parsed);
+	fs.writeFileSync(csProjFilepath, newXML);
 	return true;
 }
 
@@ -86,8 +93,11 @@ function addReferenceToCsProjFileObject(csProjFile: CsProjFile, dllPath: string,
 	csProjFile.Project.ItemGroup === undefined ? [] : csProjFile.Project.ItemGroup; // if it's undefined, define it as a list
 	csProjFile.Project.ItemGroup = 
 	typeof(csProjFile.Project.ItemGroup) !== typeof([]) ? [csProjFile.Project.ItemGroup] : csProjFile.Project.ItemGroup; // make it a list if it isn't
-	csProjFile.Project.ItemGroup.push();
-	
+	const reference: dllReference = {
+		a_Include: assemblyName,
+		Reference: {HintPath: dllPath}
+	};
+	csProjFile.Project.ItemGroup.push(reference);
 	return csProjFile;
 }
 
