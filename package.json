@@ -47,6 +47,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "electron-edge-js": "^38.0.0",
     "fast-xml-parser": "^5.2.5"
   }
 }
