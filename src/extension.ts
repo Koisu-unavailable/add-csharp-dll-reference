@@ -3,26 +3,27 @@ import * as fsUtils from './fsUtils';
 import * as fs from 'fs';
 import {XMLBuilder, XMLParser, XMLValidator} from 'fast-xml-parser';
 import { readAssemblyName } from './dllUtils';
+import {resolve} from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
 
 	
-	console.log('Congratulations, your extension "add-csharp-dll-reference" is now active!');
+	console.log('add');
 
 	// The command has been defined in the package.json file
 	const disposable = vscode.commands.registerCommand('add-csharp-dll-reference.addDllReference', (uri: vscode.Uri) => {
-		if (uri === null) {
-			// idk
+		if (uri === null || uri === undefined) {
+			vscode.window.showInformationMessage("Please right-click a dll file ")
 		}
 		else {
-			addDllReferenceForDll(uri).then(() => vscode.window.showInformationMessage("Added dll reference."));
+			addDllReferenceForDll(uri).then((result) => result ? vscode.window.showInformationMessage("Added dll reference.") : undefined );
 			
 		}
 	});
 
 	context.subscriptions.push(disposable);
 }
-async function addDllReferenceForDll(uri: vscode.Uri) {
+async function addDllReferenceForDll(uri: vscode.Uri) : Promise<boolean>{
 	vscode.window.showInformationMessage(`Adding a dll reference for ${uri.fsPath}`);
 	let csProjFile;
 	try{
@@ -35,24 +36,25 @@ async function addDllReferenceForDll(uri: vscode.Uri) {
 		else{
 			vscode.window.showErrorMessage(error.message);
 		}
-		return;
+		return false;
 	}
 	if (csProjFile === undefined){
 		vscode.window.showErrorMessage("No csproj file selected. Aborting.");
-		return;
+		return false;
 	}
-	addDllReferenceToCsProjFile(csProjFile, uri.fsPath);
+	return addDllReferenceToCsProjFile(csProjFile, uri.fsPath);
 
 }
 async function askUserForCsProjFile(uri: vscode.Uri) : Promise<string | undefined> {
-	let currentFolderPath = vscode.workspace.getWorkspaceFolder(uri)?.name;
+	let currentFolderPath = vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath;
 	if (currentFolderPath === undefined) {
 		let error = Error("Couldn't find current workspace folder");
 		error.name = "Dir not found";
 		error.cause = askUserForCsProjFile;
 		throw error;
 	}
-	return await vscode.window.showQuickPick(fsUtils.getCsProjFiles(currentFolderPath))
+	currentFolderPath = resolve(currentFolderPath);
+	return await vscode.window.showQuickPick(fsUtils.searchDirectoryFilesFiles(currentFolderPath, "csproj"));
 }
 /**
  * 
@@ -92,10 +94,9 @@ function addReferenceToCsProjFileObject(csProjFile: CsProjFile, dllPath: string,
 	csProjFile.Project.ItemGroup = 
 	csProjFile.Project.ItemGroup === undefined ? [] : csProjFile.Project.ItemGroup; // if it's undefined, define it as a list
 	csProjFile.Project.ItemGroup = 
-	typeof(csProjFile.Project.ItemGroup) !== typeof([]) ? [csProjFile.Project.ItemGroup] : csProjFile.Project.ItemGroup; // make it a list if it isn't
+	!Array.isArray(csProjFile.Project.ItemGroup)  ? [csProjFile.Project.ItemGroup] : csProjFile.Project.ItemGroup; // make it a list if it isn't
 	const reference: dllReference = {
-		a_Include: assemblyName,
-		Reference: {HintPath: dllPath}
+		Reference: {HintPath: dllPath, a_Include: assemblyName}
 	};
 	csProjFile.Project.ItemGroup.push(reference);
 	return csProjFile;

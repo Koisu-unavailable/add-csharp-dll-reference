@@ -6,8 +6,8 @@ interface CsProject{
 }
 interface dllReference{
     Reference: Refernce
-    "a_Include": string 
 }
 interface Refernce{
     HintPath: string
+    a_Include : string 
 }
