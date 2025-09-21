@@ -15,7 +15,7 @@
     "menus": {
       "explorer/context": [
         {
-          "when": "resourceExtname == .dll",
+          "when": "resourceExtname == .dll || resourceExtname == .csproj",
           "command": "add-csharp-dll-reference.addDllReference"
         }
       ]
