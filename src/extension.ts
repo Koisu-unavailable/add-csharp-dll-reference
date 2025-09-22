@@ -18,7 +18,6 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		else {
 			addDllReferenceForDll(uri).then((result) => result ? vscode.window.showInformationMessage("Added dll reference.") : undefined);
-
 		}
 	});
 
