@@ -1,4 +1,4 @@
-# add-csharp-dll-reference README
+# add-csharp-dll-reference
 
 Right click a dll file to add it to a c# project.
 
