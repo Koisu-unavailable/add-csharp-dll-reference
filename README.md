@@ -1,6 +1,6 @@
 # add-csharp-dll-reference README
 
-This is the README for your extension "add-csharp-dll-reference". After writing up a brief description, we recommend including the following sections.
+Right click a dll file to add it to a c# project.
 
 ## Features
 
